@@ -1,0 +1,28 @@
+# =============================================
+# FastAPI Backend - Python Dependencies
+# =============================================
+
+# FastAPI - The web framework we use to build our API
+fastapi==0.115.0
+
+# Uvicorn - The server that runs our FastAPI app
+uvicorn==0.30.6
+
+# SQLAlchemy - Helps us talk to the database using Python classes (ORM)
+SQLAlchemy==2.0.35
+
+# Pydantic Settings - For loading settings from .env files
+pydantic-settings==2.5.2
+
+# Python-Jose - For creating and verifying JWT tokens (login tokens)
+python-jose[cryptography]==3.3.0
+
+# Passlib + Bcrypt - For securely hashing passwords
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+
+# Python-Multipart - Required for handling file uploads (resumes)
+python-multipart==0.0.12
+
+# Aiofiles - For async file operations (saving uploaded files)
+aiofiles==24.1.0
