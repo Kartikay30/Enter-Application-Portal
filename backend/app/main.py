@@ -112,24 +112,61 @@ app.include_router(job_router)
 app.include_router(application_router)
 
 
-# ---- Health Check & Root Endpoints ----
-@app.get("/", tags=["System"])
-def root():
-    """
-    Root endpoint confirming the API is active.
-    """
-    return {
-        "app": "Enter Hiring Management System",
-        "status": "Online",
-        "version": "1.0.0",
-        "docs": "/docs",
-        "admin_email": "admin@enter.in"
-    }
-
-
+# ---- Health Check Endpoint ----
 @app.get("/api/health", tags=["System"])
 def health_check():
     """
     Health check endpoint for monitoring uptime and deployment platforms.
     """
     return {"status": "healthy", "database": "connected"}
+
+
+# ---- Serve React Frontend in Production ----
+# In production (Railway), we serve the built React app from FastAPI itself.
+# The React build files (index.html, JS, CSS) are in the "static" folder.
+# This is created during the Railway build step.
+import pathlib
+from fastapi.responses import FileResponse
+
+# Path to the React production build folder
+STATIC_DIR = pathlib.Path(__file__).resolve().parent.parent / "static"
+
+if STATIC_DIR.exists():
+    # Serve static assets (JS, CSS, images) from /assets/
+    app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="frontend-assets")
+
+    # Serve any other static files (favicon, icons, etc.)
+    @app.get("/{full_path:path}", tags=["Frontend"])
+    def serve_react_app(full_path: str):
+        """
+        Catch-all route: serves the React app for any non-API path.
+        This enables client-side routing (React Router) to work correctly.
+        
+        For example:
+          - /admin/login     -> serves index.html (React handles the route)
+          - /admin/dashboard -> serves index.html (React handles the route)
+          - /favicon.svg     -> serves the actual file if it exists
+        """
+        # Check if the requested file exists in the static build
+        file_path = STATIC_DIR / full_path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(str(file_path))
+
+        # For all other paths, serve index.html (React Router handles it)
+        return FileResponse(str(STATIC_DIR / "index.html"))
+else:
+    # Development mode: show a simple API info response at /
+    @app.get("/", tags=["System"])
+    def root():
+        """
+        Root endpoint confirming the API is active (development mode).
+        """
+        return {
+            "app": "Enter Hiring Management System",
+            "status": "Online",
+            "version": "1.0.0",
+            "docs": "/docs",
+            "admin_email": "admin@enter.in",
+            "note": "Frontend is served separately via Vite dev server at http://localhost:5173"
+        }
+
