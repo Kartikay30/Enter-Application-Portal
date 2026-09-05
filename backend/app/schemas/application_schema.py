@@ -53,27 +53,13 @@ class StageUpdate(BaseModel):
         "R3", "R3 Reject", "Reject", "Approved"
     """
     stage: str  # The new stage to move the candidate to
+    reason: Optional[str] = None  # Reason for stage move, selection, or rejection
 
 
 class ApplicationResponse(BaseModel):
     """
     Complete application data sent back in API responses.
     Includes all candidate info + the job title they applied for.
-    
-    Example response:
-    {
-        "id": 1,
-        "job_id": 1,
-        "job_title": "AI Engineer",
-        "full_name": "Rahul Sharma",
-        "email": "rahul@example.com",
-        "phone": "9876543210",
-        "brief_note": "I am passionate about AI...",
-        "resume_filename": "rahul_resume.pdf",
-        "stage": "Applied",
-        "created_at": "2024-01-15T10:30:00",
-        "updated_at": "2024-01-15T10:30:00"
-    }
     """
     id: int
     job_id: Optional[int] = None
@@ -84,6 +70,7 @@ class ApplicationResponse(BaseModel):
     brief_note: Optional[str] = None
     resume_filename: Optional[str] = None
     stage: str
+    stage_reason: Optional[str] = None       # Reason for current stage / decision
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

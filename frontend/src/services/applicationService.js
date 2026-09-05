@@ -49,9 +49,13 @@ export const applicationService = {
     return response.data;
   },
 
-  // Update candidate hiring stage (Admin only)
-  updateStage: async (applicationId, stage) => {
-    const response = await api.patch(`/api/applications/${applicationId}/stage`, { stage });
+  // Update candidate hiring stage with decision reason (Admin only)
+  updateStage: async (applicationId, stage, reason = '') => {
+    const payload = { stage };
+    if (reason !== undefined && reason !== null) {
+      payload.reason = reason;
+    }
+    const response = await api.patch(`/api/applications/${applicationId}/stage`, payload);
     return response.data;
   },
 

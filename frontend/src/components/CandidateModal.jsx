@@ -5,28 +5,51 @@
 // =============================================
 
 import React, { useState } from 'react';
-import { X, User, Mail, Phone, Briefcase, FileText, Download, Clock, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { X, User, Mail, Phone, Briefcase, FileText, Download, Clock, ArrowRight, CheckCircle2, MessageSquare } from 'lucide-react';
 import { HIRING_STAGES } from '../utils/constants';
 import StageBadge from './StageBadge';
+import StageReasonModal from './StageReasonModal';
 import { applicationService } from '../services/applicationService';
 
 export default function CandidateModal({ isOpen, onClose, candidate, onStageUpdated }) {
   const [currentStage, setCurrentStage] = useState(candidate?.stage || 'Applied');
+  const [currentReason, setCurrentReason] = useState(candidate?.stage_reason || '');
   const [updating, setUpdating] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const [pendingStageChange, setPendingStageChange] = useState(null);
+
+  React.useEffect(() => {
+    if (candidate) {
+      setCurrentStage(candidate.stage || 'Applied');
+      setCurrentReason(candidate.stage_reason || '');
+      setSuccessMsg('');
+    }
+  }, [candidate]);
 
   if (!isOpen || !candidate) return null;
 
-  const handleStageChange = async (newStage) => {
+  const handleStageButtonClick = (newStage) => {
+    if (newStage === currentStage) return;
+    setPendingStageChange({
+      candidate: { ...candidate, stage: currentStage },
+      targetStage: newStage
+    });
+  };
+
+  const handleConfirmStageWithReason = async (appId, newStage, reason) => {
     try {
       setUpdating(true);
       setSuccessMsg('');
-      await applicationService.updateStage(candidate.id, newStage);
+      await applicationService.updateStage(candidate.id, newStage, reason);
       setCurrentStage(newStage);
+      setCurrentReason(reason);
       setSuccessMsg(`Candidate moved to ${newStage}`);
-      onStageUpdated(candidate.id, newStage);
+      if (onStageUpdated) {
+        onStageUpdated(candidate.id, newStage, reason);
+      }
     } catch (err) {
       console.error('Failed to update stage:', err);
+      throw err;
     } finally {
       setUpdating(false);
     }
@@ -106,17 +129,41 @@ export default function CandidateModal({ isOpen, onClose, candidate, onStageUpda
                   <button
                     key={stg}
                     disabled={updating}
-                    onClick={() => handleStageChange(stg)}
+                    onClick={() => handleStageButtonClick(stg)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       isCurrent
-                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/25 ring-2 ring-indigo-400'
-                        : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700/50'
+                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/25 ring-2 ring-indigo-400 font-semibold'
+                        : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700/50 cursor-pointer'
                     } disabled:opacity-50`}
                   >
                     {stg}
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Decision Reason / Admin Notes Section */}
+          <div>
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+              <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Admin Decision / Selection & Rejection Notes</span>
+            </h4>
+            <div className={`p-4 rounded-xl border text-xs leading-relaxed ${
+              currentReason 
+                ? 'bg-indigo-950/20 border-indigo-500/30 text-indigo-200' 
+                : 'bg-slate-950/60 border-slate-800 text-slate-500 italic'
+            }`}>
+              {currentReason ? (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-indigo-300 font-semibold text-[11px] uppercase tracking-wider">
+                    <span>Reason for current stage ({currentStage}):</span>
+                  </div>
+                  <p className="text-slate-200 whitespace-pre-line text-sm">{currentReason}</p>
+                </div>
+              ) : (
+                <span>No specific evaluation reason recorded for this candidate yet.</span>
+              )}
             </div>
           </div>
 
@@ -181,7 +228,7 @@ export default function CandidateModal({ isOpen, onClose, candidate, onStageUpda
                 target="_blank"
                 rel="noreferrer"
                 download={candidate.resume_filename || 'resume.pdf'}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-semibold transition-all hover:scale-105"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-semibold transition-all hover:scale-105 cursor-pointer"
               >
                 <Download className="w-4 h-4" />
                 <span>Download Resume</span>
@@ -195,13 +242,22 @@ export default function CandidateModal({ isOpen, onClose, candidate, onStageUpda
         <div className="px-6 py-4 border-t border-slate-800 bg-slate-950/50 flex justify-end">
           <button
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium transition-colors"
+            className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium transition-colors cursor-pointer"
           >
             Close
           </button>
         </div>
 
       </div>
+
+      {/* Stage Reason Confirmation Modal */}
+      <StageReasonModal
+        isOpen={!!pendingStageChange}
+        onClose={() => setPendingStageChange(null)}
+        candidate={pendingStageChange?.candidate}
+        targetStage={pendingStageChange?.targetStage}
+        onConfirm={handleConfirmStageWithReason}
+      />
     </div>
   );
 }

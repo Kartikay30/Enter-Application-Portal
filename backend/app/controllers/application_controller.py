@@ -89,6 +89,7 @@ class ApplicationController:
             brief_note=app_model.brief_note,
             resume_filename=app_model.resume_filename,
             stage=app_model.stage,
+            stage_reason=app_model.stage_reason,
             created_at=app_model.created_at,
             updated_at=app_model.updated_at
         )
@@ -118,6 +119,7 @@ class ApplicationController:
                     brief_note=app.brief_note,
                     resume_filename=app.resume_filename,
                     stage=app.stage,
+                    stage_reason=app.stage_reason,
                     created_at=app.created_at,
                     updated_at=app.updated_at
                 )
@@ -144,13 +146,14 @@ class ApplicationController:
             brief_note=app.brief_note,
             resume_filename=app.resume_filename,
             stage=app.stage,
+            stage_reason=app.stage_reason,
             created_at=app.created_at,
             updated_at=app.updated_at
         )
 
-    def update_stage(self, db: Session, application_id: int, new_stage: str) -> ApplicationResponse:
+    def update_stage(self, db: Session, application_id: int, new_stage: str, reason: Optional[str] = None) -> ApplicationResponse:
         """
-        Updates the hiring stage of a candidate.
+        Updates the hiring stage and decision reason of a candidate.
         Validates that the stage is in the approved list.
         """
         if new_stage not in VALID_STAGES:
@@ -160,7 +163,7 @@ class ApplicationController:
             )
 
         updated_app = application_repository.update_stage(
-            db, application_id=application_id, new_stage=new_stage
+            db, application_id=application_id, new_stage=new_stage, reason=reason
         )
         if not updated_app:
             raise HTTPException(
@@ -178,6 +181,7 @@ class ApplicationController:
             brief_note=updated_app.brief_note,
             resume_filename=updated_app.resume_filename,
             stage=updated_app.stage,
+            stage_reason=updated_app.stage_reason,
             created_at=updated_app.created_at,
             updated_at=updated_app.updated_at
         )

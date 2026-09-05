@@ -129,7 +129,8 @@ def update_application_stage(
     return application_controller.update_stage(
         db=db,
         application_id=application_id,
-        new_stage=stage_data.stage
+        new_stage=stage_data.stage,
+        reason=stage_data.reason
     )
 
 

@@ -24,6 +24,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("enter_ats")
 
+from sqlalchemy import text
 from app.config import settings
 from app.db.database import engine, Base, SessionLocal
 from app.db.seed import seed_database
@@ -48,6 +49,15 @@ async def lifespan(app: FastAPI):
     # 2. Create all database tables (User, Job, Application)
     print("[DATABASE] Creating tables if not already present...")
     Base.metadata.create_all(bind=engine)
+
+    # Safe migration: ensure stage_reason column exists in applications table
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("ALTER TABLE applications ADD COLUMN stage_reason TEXT"))
+            conn.commit()
+        except Exception:
+            pass  # Column already exists
+
     print("[DATABASE] Tables ready.")
 
     # 3. Seed initial admin & 10 jobs

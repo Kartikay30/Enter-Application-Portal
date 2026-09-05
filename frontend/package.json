@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "share": "ssh -o StrictHostKeyChecking=no -R 80:localhost:5173 serveo.net",
+    "share:localtunnel": "npx localtunnel --port 5173 --local-host 127.0.0.1",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview"

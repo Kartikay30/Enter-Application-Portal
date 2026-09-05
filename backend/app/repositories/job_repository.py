@@ -11,6 +11,7 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.models.job_model import JobModel
+from app.models.application_model import ApplicationModel
 from app.schemas.job_schema import JobCreate, JobUpdate
 
 
@@ -92,15 +93,19 @@ class JobRepository:
     def delete(self, db: Session, job_id: int) -> bool:
         """
         Delete a job by its ID.
+        Disassociates any candidate applications first, then deletes the job.
         Returns True if deleted, False if job was not found.
         
         SQL Equivalent:
+            UPDATE applications SET job_id = NULL WHERE job_id = :job_id;
             DELETE FROM jobs WHERE id = :job_id;
         """
         db_job = self.get_by_id(db, job_id)
         if not db_job:
             return False
 
+        # Gracefully preserve candidate applications by unlinking job_id
+        db.query(ApplicationModel).filter(ApplicationModel.job_id == job_id).update({ApplicationModel.job_id: None})
         db.delete(db_job)
         db.commit()
         return True

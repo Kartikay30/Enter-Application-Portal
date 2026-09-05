@@ -80,6 +80,8 @@ class ApplicationModel(Base):
     #   "Reject"     -> General rejection
     #   "Approved"   -> Candidate is hired!
     stage = Column(String(20), default="Applied", nullable=False)
+    # Reason / Feedback provided by admin for selection, rejection, or stage movement
+    stage_reason = Column(Text, nullable=True)
 
     # Timestamps
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

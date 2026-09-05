@@ -13,7 +13,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Users, Briefcase, Plus, Search, Filter, RefreshCw, FileText, Download,
-  Edit2, Trash2, CheckCircle2, XCircle, Clock, ChevronRight, Eye, Sparkles, Building2, MapPin
+  Edit2, Trash2, CheckCircle2, XCircle, Clock, ChevronRight, Eye, Sparkles, Building2, MapPin, AlertTriangle
 } from 'lucide-react';
 import { jobService } from '../services/jobService';
 import { applicationService } from '../services/applicationService';
@@ -21,6 +21,7 @@ import { HIRING_STAGES } from '../utils/constants';
 import StageBadge from '../components/StageBadge';
 import JobModal from '../components/JobModal';
 import CandidateModal from '../components/CandidateModal';
+import StageReasonModal from '../components/StageReasonModal';
 import Toast from '../components/Toast';
 
 export default function AdminDashboard() {
@@ -41,8 +42,11 @@ export default function AdminDashboard() {
   // Modal States
   const [isJobModalOpen, setIsJobModalOpen] = useState(false);
   const [jobToEdit, setJobToEdit] = useState(null);
+  const [jobToDelete, setJobToDelete] = useState(null);
+  const [isDeletingJob, setIsDeletingJob] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [isCandidateModalOpen, setIsCandidateModalOpen] = useState(false);
+  const [pendingStageChange, setPendingStageChange] = useState(null);
 
   // Toast Notification
   const [toast, setToast] = useState({ message: '', type: 'success' });
@@ -87,35 +91,58 @@ export default function AdminDashboard() {
     loadDashboardData();
   };
 
-  // Handle Stage Update directly from candidate row dropdown
-  const handleQuickStageChange = async (appId, newStage) => {
+  // Handle Stage selection from candidate row dropdown -> opens Reason pop-up modal
+  const handleStageDropdownSelect = (candidate, newStage) => {
+    if (candidate.stage === newStage) return;
+    setPendingStageChange({
+      candidate,
+      targetStage: newStage
+    });
+  };
+
+  // Confirm stage change with admin reason note and persist to database
+  const handleConfirmStageChange = async (appId, newStage, reason) => {
     try {
-      await applicationService.updateStage(appId, newStage);
-      showToast(`Candidate moved to ${newStage}`);
+      await applicationService.updateStage(appId, newStage, reason);
+      showToast(`Candidate moved to ${newStage} with decision reason recorded.`);
       // Update local state smoothly
       setApplications((prev) =>
-        prev.map((app) => (app.id === appId ? { ...app, stage: newStage } : app))
+        prev.map((app) => (app.id === appId ? { ...app, stage: newStage, stage_reason: reason } : app))
       );
       // Refresh stats
       const updatedStats = await applicationService.getStats();
       setStats(updatedStats);
     } catch (err) {
       console.error('Failed to update stage:', err);
-      showToast('Failed to update candidate stage.', 'error');
+      showToast(err?.response?.data?.detail || 'Failed to update candidate stage.', 'error');
+      throw err;
     }
   };
 
-  // Handle Delete Job
-  const handleDeleteJob = async (jobId, jobTitle) => {
-    if (window.confirm(`Are you sure you want to delete the job "${jobTitle}"?`)) {
-      try {
-        await jobService.deleteJob(jobId);
-        showToast(`Job "${jobTitle}" deleted successfully.`);
-        loadDashboardData();
-      } catch (err) {
-        console.error('Failed to delete job:', err);
-        showToast(err.response?.data?.detail || 'Failed to delete job.', 'error');
-      }
+  // Open Delete Job Confirmation Modal
+  const handleOpenDeleteJob = (job) => {
+    setJobToDelete(job);
+  };
+
+  // Confirm and Execute Delete Job
+  const handleConfirmDeleteJob = async () => {
+    if (!jobToDelete) return;
+    try {
+      setIsDeletingJob(true);
+      await jobService.deleteJob(jobToDelete.id);
+      
+      // Optimistic state update
+      setJobs((prev) => prev.filter((j) => j.id !== jobToDelete.id));
+      showToast(`Job "${jobToDelete.title}" deleted successfully.`);
+      setJobToDelete(null);
+      
+      // Reload fresh stats & jobs
+      loadDashboardData();
+    } catch (err) {
+      console.error('Failed to delete job:', err);
+      showToast(err.response?.data?.detail || 'Failed to delete job.', 'error');
+    } finally {
+      setIsDeletingJob(false);
     }
   };
 
@@ -380,15 +407,22 @@ export default function AdminDashboard() {
 
                         {/* Current Stage Badge */}
                         <td className="px-6 py-4">
-                          <StageBadge stage={app.stage} />
+                          <div className="space-y-1">
+                            <StageBadge stage={app.stage} />
+                            {app.stage_reason && (
+                              <p className="text-[11px] text-slate-400 line-clamp-1 max-w-[160px] italic" title={app.stage_reason}>
+                                "{app.stage_reason}"
+                              </p>
+                            )}
+                          </div>
                         </td>
 
-                        {/* Quick Stage Transition Dropdown */}
+                        {/* Quick Stage Transition Dropdown -> Prompts Reason Modal */}
                         <td className="px-6 py-4">
                           <select
                             value={app.stage}
-                            onChange={(e) => handleQuickStageChange(app.id, e.target.value)}
-                            className="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs font-medium text-slate-200 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                            onChange={(e) => handleStageDropdownSelect(app, e.target.value)}
+                            className="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs font-medium text-slate-200 focus:outline-none focus:border-indigo-500 cursor-pointer hover:border-slate-600 transition-colors"
                           >
                             {HIRING_STAGES.map((stg) => (
                               <option key={stg} value={stg}>
@@ -520,7 +554,7 @@ export default function AdminDashboard() {
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteJob(job.id, job.title)}
+                          onClick={() => handleOpenDeleteJob(job)}
                           title="Delete Job"
                           className="p-2 rounded-lg bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
                         >
@@ -553,13 +587,73 @@ export default function AdminDashboard() {
         isOpen={isCandidateModalOpen}
         onClose={() => setIsCandidateModalOpen(false)}
         candidate={selectedCandidate}
-        onStageUpdated={(appId, newStage) => {
+        onStageUpdated={(appId, newStage, reason) => {
           setApplications((prev) =>
-            prev.map((a) => (a.id === appId ? { ...a, stage: newStage } : a))
+            prev.map((a) => (a.id === appId ? { ...a, stage: newStage, stage_reason: reason } : a))
           );
           applicationService.getStats().then(setStats);
         }}
       />
+
+      {/* Pop-up Modal for Selection/Rejection/Stage Reason */}
+      <StageReasonModal
+        isOpen={!!pendingStageChange}
+        onClose={() => setPendingStageChange(null)}
+        candidate={pendingStageChange?.candidate}
+        targetStage={pendingStageChange?.targetStage}
+        onConfirm={handleConfirmStageChange}
+      />
+
+      {/* Delete Job Confirmation Modal */}
+      {jobToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 space-y-6">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Delete Job Opening?</h3>
+                <p className="text-sm text-slate-400 mt-1">
+                  Are you sure you want to permanently delete <span className="text-white font-medium">"{jobToDelete.title}"</span>?
+                </p>
+                <p className="text-xs text-slate-500 mt-2">
+                  Existing candidates who applied for this role will be safely preserved in your ATS pipeline.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeletingJob}
+                onClick={() => setJobToDelete(null)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingJob}
+                onClick={handleConfirmDeleteJob}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-xs font-semibold shadow-lg shadow-rose-600/25 transition-all cursor-pointer"
+              >
+                {isDeletingJob ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Job</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

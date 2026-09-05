@@ -157,7 +157,8 @@ def seed_database(db: Session) -> None:
                 "brief_note": "Experienced Full Stack Developer with 4 years in React and FastAPI. Excited to contribute to Enter's rapid growth.",
                 "resume_filename": "aarav_sharma_resume.pdf",
                 "resume_path": None,
-                "stage": "Applied"
+                "stage": "Applied",
+                "stage_reason": "Application received and under preliminary review."
             },
             {
                 "job_id": created_jobs[1].id,
@@ -167,7 +168,8 @@ def seed_database(db: Session) -> None:
                 "brief_note": "AI researcher specializing in LLM agents and retrieval augmented generation. Published 2 research papers.",
                 "resume_filename": "priya_patel_cv.pdf",
                 "resume_path": None,
-                "stage": "R1"
+                "stage": "R1",
+                "stage_reason": "Strong profile in LLMs and AI agent architectures. Shortlisted for Round 1 technical interview."
             },
             {
                 "job_id": created_jobs[2].id,
@@ -177,7 +179,8 @@ def seed_database(db: Session) -> None:
                 "brief_note": "Frontend developer obsessed with web performance, 60fps animations, and accessible design systems.",
                 "resume_filename": "rohan_verma_portfolio.pdf",
                 "resume_path": None,
-                "stage": "R2"
+                "stage": "R2",
+                "stage_reason": "Cleared Round 1 with distinction in React and state management. Advanced to Round 2 architecture interview."
             },
             {
                 "job_id": created_jobs[6].id,
@@ -187,7 +190,8 @@ def seed_database(db: Session) -> None:
                 "brief_note": "Final year Computer Science student. Built 3 fullstack web apps and passionate about AI development.",
                 "resume_filename": "ananya_sen_resume.pdf",
                 "resume_path": None,
-                "stage": "Approved"
+                "stage": "Approved",
+                "stage_reason": "Outstanding project portfolio and problem-solving skills throughout all interview rounds. Selected for hire!"
             },
             {
                 "job_id": created_jobs[3].id,
@@ -197,7 +201,8 @@ def seed_database(db: Session) -> None:
                 "brief_note": "Backend developer with strong SQL and microservices background. Looking for high scale challenges.",
                 "resume_filename": "vikram_singh_resume.pdf",
                 "resume_path": None,
-                "stage": "R1 Reject"
+                "stage": "R1 Reject",
+                "stage_reason": "Lacks required depth in asynchronous Python concurrency and FastAPI framework."
             }
         ]
 

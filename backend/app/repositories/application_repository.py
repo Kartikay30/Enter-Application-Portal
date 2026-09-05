@@ -95,9 +95,9 @@ class ApplicationRepository:
         """
         return db.query(ApplicationModel).filter(ApplicationModel.id == application_id).first()
 
-    def update_stage(self, db: Session, application_id: int, new_stage: str) -> Optional[ApplicationModel]:
+    def update_stage(self, db: Session, application_id: int, new_stage: str, reason: Optional[str] = None) -> Optional[ApplicationModel]:
         """
-        Move a candidate to a new hiring stage.
+        Move a candidate to a new hiring stage and save decision reason.
         Example: "Applied" -> "R1" or "R2 Reject" -> "Reject" or "R3" -> "Approved"
         """
         db_app = self.get_by_id(db, application_id)
@@ -105,6 +105,8 @@ class ApplicationRepository:
             return None
 
         db_app.stage = new_stage
+        if reason is not None:
+            db_app.stage_reason = reason
         db.commit()
         db.refresh(db_app)
         return db_app
